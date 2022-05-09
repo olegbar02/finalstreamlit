@@ -28,10 +28,8 @@ with st.echo(code_location='below'):
 
     @st.cache()
     def get_data():
-
-        data_url = 'yangodatanorm 3.csv.zip'
-        return pd.read_csv(data_url)
-
+        data_url = 'yangodata.csv.zip'
+        return pd.read_csv(data_url)[:500000]
 
 
     initial_df = get_data()
@@ -44,7 +42,7 @@ with st.echo(code_location='above'):
         День недели, время дня, административный округ, расстояние до центра Москвы 
     """
     # Берем дни недели и часы
-    df['created_at']=pd.to_datetime(df['created_at'], utc=True)
+    df['created_at'] = pd.to_datetime(df['created_at'], utc=True)
     df['day_of_week'] = df['created_at'].dt.day_name()
     df['Time'] = df['created_at'].dt.hour
     df['Times of Day'] = 'null'
@@ -67,8 +65,6 @@ with st.echo(code_location='above'):
 
     dist = get_distance()
     df['distance_from_center'] = dist
-
-
 
 
     @st.cache()
@@ -97,33 +93,42 @@ with st.echo(code_location='above'):
 
     moscow_geometry_df = get_districts()
 
+
     def get_coords(lat, lon):
         return Point(lon, lat)
 
+
     df['coords'] = df[['location_latitude', 'location_longitude']].apply(lambda x: get_coords(*x), axis=1)
+
 
     @st.cache(allow_output_mutation=True)
     def get_municipality():
         new_df = df.copy(deep=True)
         for idx, row in new_df.iterrows():
             coord = row.coords
-            for distr, okr, geometry in zip (moscow_geometry_df['district'], moscow_geometry_df['okrug'], moscow_geometry_df['geometry']):
+            for distr, okr, geometry in zip(moscow_geometry_df['district'], moscow_geometry_df['okrug'],
+                                            moscow_geometry_df['geometry']):
                 if geometry.contains(coord):
-                    new_df.at[idx, 'district']=distr
-                    new_df.at[idx, 'okrug']=okr
+                    new_df.at[idx, 'district'] = distr
+                    new_df.at[idx, 'okrug'] = okr
                     break
                 else:
                     continue
         return new_df
+
+
     full_df = get_municipality()
     """Я хочу анализировать только Москву, поэтому удалю заказы не из Москвы"""
     full_df.dropna(subset='district', inplace=True)
 
+
     @st.cache()
     def final_df():
-        d=full_df.drop(['coords'], axis=1).copy(deep=True)
+        d = full_df.drop(['coords'], axis=1).copy(deep=True)
         return d
-    df_final=final_df()
+
+
+    df_final = final_df()
     df_final
 with st.echo(code_location='below'):
     """
@@ -137,5 +142,9 @@ with st.echo(code_location='below'):
 
     folium_static(m)
 
-    df_municipalities = df_final.groupby(['district'], as_index=False).agg({'id':'count', 'amount_charged':'mean'})
-    df_municipalities
+    df_municipalities = (df_final.groupby(['district'], as_index=False).agg({'id': 'count', 'amount_charged': 'mean'})
+                         .merge(moscow_geometry_df, on='district'))
+    geopandas.GeoDataFrame(moscow_geometry_df[['district', 'okrug', 'geometry']]).to_file("moscow_geometry.geojson", driver='GeoJSON')
+    map = folium.Map(location=[55.753544, 37.621211], zoom_start=10)
+    folium.Choropleth(geo_data='moscow_geometry.geojson', data=df_municipalities, columns=['district','amount_charged'], key_on='feature.properties.district').add_to(map)
+    folium_static(map)
