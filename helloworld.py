@@ -140,20 +140,21 @@ with st.echo(code_location='below'):
         data=[[lat, lon] for lat, lon in zip(df_final['location_latitude'], df_final['location_longitude'])]
         , name='Заказы').add_to(m)
 
-
     folium_static(m)
     """А это районы Москвы по среднему чеку заказа """
     df_municipalities = (df_final.groupby(['district'], as_index=False).agg({'id': 'count', 'amount_charged': 'mean'})
                          .merge(moscow_geometry_df, on='district'))
-    geopandas.GeoDataFrame(moscow_geometry_df[['district', 'okrug', 'geometry']]).to_file("moscow_geometry.geojson", driver='GeoJSON')
+    geopandas.GeoDataFrame(moscow_geometry_df[['district', 'okrug', 'geometry']]).to_file("moscow_geometry.geojson",
+                                                                                          driver='GeoJSON')
     map = folium.Map(location=[55.753544, 37.621211], zoom_start=10)
 
     ## From (https://towardsdatascience.com/folium-and-choropleth-map-from-zero-to-pro-6127f9e68564)
-    scale = (df_municipalities['amount_charged'].quantile((0,0.1,0.3,0.5,0.6, 0.7, 0.8, 0.9, 1))).tolist()
+    scale = (df_municipalities['amount_charged'].quantile((0.5, 0.6, 0.7, 0.8, 0.9, 1))).tolist()
     ## end
-    folium.Choropleth(geo_data='moscow_geometry.geojson', data=df_municipalities, columns=['district','amount_charged']
+    folium.Choropleth(geo_data='moscow_geometry.geojson', data=df_municipalities, columns=['district', 'amount_charged']
                       , key_on='feature.properties.district'
                       , fill_color='YlOrRd'
-                      ,nan_fill_color="White"
-                      ,threshold_scale = scale).add_to(map)
+                      , nan_fill_color="White"
+                      , threshold_scale=scale
+                      ).add_to(map)
     folium_static(map)
