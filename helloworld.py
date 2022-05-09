@@ -28,7 +28,7 @@ with st.echo(code_location='below'):
 
     @st.cache()
     def get_data():
-        data_url = 'yangodata.csv.zip'
+        data_url = 'yangodatanorm 3.csv.zip'
         return pd.read_csv(data_url)[:500000]
 
 
