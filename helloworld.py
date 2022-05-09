@@ -53,7 +53,7 @@ with st.echo(code_location='above'):
     df['Times of Day'] = df['Times of Day'].astype(str)
 
 
-    @st.cache()
+    @st.cache(persist=True)
     def get_distance():
         # Добавляем расстояние до центра Москвы
         distance_from_c = []
@@ -67,7 +67,7 @@ with st.echo(code_location='above'):
     df['distance_from_center'] = dist
 
 
-    @st.cache()
+    @st.cache(persist=True)
     def get_districts():
         # Здесь мы получаем данные о полигонах московских административных округов и районов
         # source (http://osm-boundaries.com)
