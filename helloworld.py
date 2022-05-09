@@ -248,6 +248,7 @@ with st.echo(code_location='below'):
                             , fill_color='YlOrRd'
                             , nan_fill_color="White"
                             , legend_name=legend
+                            , tooltip = merge_col
                             ).add_to(map)
     folium_static(map)
 
@@ -255,7 +256,6 @@ with st.echo(code_location='bellow'):
     '''### Теперь давайте посмотрим на заказы в разрезе дня недели и времени дня'''
     df_weekday_time = df_final.groupby(['day_of_week', 'Times_of_Day'], as_index=False) \
         .agg({'id': 'count', 'amount_charged': 'mean'})
-    ''''''
     fig1 = go.Figure(data=[go.Bar(name='Количество заказов', x=
     df_weekday_time[df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['Times_of_Day']
                                   , y=df_weekday_time[
