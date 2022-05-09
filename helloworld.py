@@ -5,6 +5,7 @@ from folium.plugins import MarkerCluster, FastMarkerCluster
 import streamlit as st
 import pandas as pd
 from streamlit_folium import st_folium, folium_static
+from folium.features import GeoJsonTooltip
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -29,7 +30,7 @@ with st.echo(code_location='below'):
     @st.cache()
     def get_data():
         data_url = 'yangodatanorm 3.csv.zip'
-        return pd.read_csv(data_url)[:500000]
+        return pd.read_csv(data_url)[:30000]
 
 
     initial_df = get_data()
@@ -45,12 +46,12 @@ with st.echo(code_location='above'):
     df['created_at'] = pd.to_datetime(df['created_at'], utc=True)
     df['day_of_week'] = df['created_at'].dt.day_name()
     df['Time'] = df['created_at'].dt.hour
-    df['Times of Day'] = 'null'
-    df['Times of Day'].mask((df['Time'] >= 6) & (df['Time'] <= 12), 'утро', inplace=True)
-    df['Times of Day'].mask((df['Time'] > 12) & (df['Time'] <= 18), 'день', inplace=True)
-    df['Times of Day'].mask((df['Time'] > 18) & (df['Time'] <= 23), 'вечер', inplace=True)
-    df['Times of Day'].mask((df['Time'] > 23) & (df['Time'] < 6), 'ночь', inplace=True)
-    df['Times of Day'] = df['Times of Day'].astype(str)
+    df['Times_of_Day'] = 'null'
+    df['Times_of_Day'].mask((df['Time'] >= 6) & (df['Time'] <= 12), 'утро', inplace=True)
+    df['Times_of_Day'].mask((df['Time'] > 12) & (df['Time'] <= 18), 'день', inplace=True)
+    df['Times_of_Day'].mask((df['Time'] > 18) & (df['Time'] <= 23), 'вечер', inplace=True)
+    df['Times_of_Day'].mask(df['Times_of_Day'] == 'null', 'ночь', inplace=True)
+    df['Times_of_Day'] = df['Times_of_Day'].astype(str)
 
 
     @st.cache(persist=True)
@@ -141,20 +142,169 @@ with st.echo(code_location='below'):
         , name='Заказы').add_to(m)
 
     folium_static(m)
-    """А это районы Москвы по среднему чеку заказа """
-    df_municipalities = (df_final.groupby(['district'], as_index=False).agg({'id': 'count', 'amount_charged': 'mean'})
-                         .merge(moscow_geometry_df, on='district'))
-    geopandas.GeoDataFrame(moscow_geometry_df[['district', 'okrug', 'geometry']]).to_file("moscow_geometry.geojson",
-                                                                                          driver='GeoJSON')
+    """ Давайте посмотрим на заказы в разрезе муниципалитета
+    , административного округа по среднему чеку и по количеству"""
+    col1, col2 = st.columns(2)
+    with col1:
+        option1 = st.selectbox('Какое деление вы хотите выбрать?', ('Округа', 'Районы'))
+    with col2:
+        option2 = st.selectbox('Как вы хотите их сравнить?', ('Количество заказов', 'Средний чек'))
+
+    if option1 == 'Районы':
+        df_municipalities = (df_final.groupby(['district'], as_index=False)
+                             .agg({'id': 'count', 'amount_charged': 'mean'})
+                             .merge(moscow_geometry_df, on='district', how='left'))
+        geopandas.GeoDataFrame(moscow_geometry_df[['district', 'okrug', 'geometry']]) \
+            .to_file("moscow_geometry.geojson",
+                     driver='GeoJSON')
+        geojson = 'moscow_geometry.geojson'
+        if option2 == 'Количество заказов':
+            merge_col = ['district', 'id']
+            scale = (df_municipalities['id'].quantile((0.5, 0.6, 0.7, 0.8))).tolist()
+            legend = 'Количество заказов'
+        else:
+            merge_col = ['district', 'amount_charged']
+            scale = (df_municipalities['amount_charged'].quantile((0.5, 0.6, 0.7, 0.8))).tolist()
+            legend = 'Средний чек'
+        keys = 'feature.properties.district'
+        ##FROM (https://towardsdatascience.com/folium-and-choropleth-map-from-zero-to-pro-6127f9e68564)
+        # tooltip = folium.features.GeoJson(
+        #     data=df_municipalities.dropna(),
+        #     name=legend,
+        #     smooth_factor=2,
+        #     style_function=lambda x: {'color': 'black', 'fillColor': 'transparent', 'weight': 0.5},
+        #     tooltip=folium.features.GeoJsonTooltip(
+        #         fields=[
+        #             'district',
+        #             'amount_charged',
+        #             'id'],
+        #         aliases=[
+        #             'Район:',
+        #             "Средний чек:",
+        #             "Кол-во заказов:",
+        #         ],
+        #         localize=True,
+        #         sticky=False,
+        #         labels=True,
+        #         style="""
+        #                     background-color: #F0EFEF;
+        #                     border: 2px solid black;
+        #                     border-radius: 3px;
+        #                     box-shadow: 3px;
+        #                 """,
+        #         max_width=800, ), highlight_function=lambda x: {'weight': 3, 'fillColor': 'grey'})
+        ## END
+    elif option1 == 'Округа':
+        df_municipalities = (df_final.groupby(['okrug'], as_index=False)
+                             .agg({'id': 'count', 'amount_charged': 'mean'})
+                             .merge(geopandas.read_file('okruga.geojson')
+                                    , left_on='okrug'
+                                    , right_on='local_name'
+                                    , how='left'))
+        geojson = 'okruga.geojson'
+        if option2 == 'Количество заказов':
+            merge_col = ['okrug', 'id']
+            scale = (df_municipalities['id'].quantile((0.3, 0.5, 0.6, 0.7, 0.8))).tolist()
+            legend = 'Количество заказов'
+        else:
+            merge_col = ['okrug', 'amount_charged']
+            scale = (df_municipalities['amount_charged'].quantile((0.3, 0.5, 0.6, 0.7, 0.8))).tolist()
+            legend = 'Средний чек'
+        keys = 'feature.properties.local_name'
+        ##FROM (https://towardsdatascience.com/folium-and-choropleth-map-from-zero-to-pro-6127f9e68564)
+        # tooltip = folium.features.GeoJson(
+        #     data=df_municipalities.dropna(),
+        #     name=legend,
+        #     smooth_factor=2,
+        #     style_function=lambda x: {'color': 'black', 'fillColor': 'transparent', 'weight': 0.5},
+        #     tooltip=folium.features.GeoJsonTooltip(
+        #         fields=[
+        #             'okrug',
+        #             'amount_charged',
+        #             'id'],
+        #         aliases=[
+        #             'Адм. округ:',
+        #             "Средний чек:",
+        #             "Кол-во заказов:",
+        #         ],
+        #         localize=True,
+        #         sticky=False,
+        #         labels=True,
+        #         style="""
+        #                             background-color: #F0EFEF;
+        #                             border: 2px solid black;
+        #                             border-radius: 3px;
+        #                             box-shadow: 3px;
+        #                         """,
+        #         max_width=800),
+        #     highlight_function=lambda x: {'weight': 3, 'fillColor': 'grey'}
+        # )
+        ##END
+
     map = folium.Map(location=[55.753544, 37.621211], zoom_start=10)
 
-    ## From (https://towardsdatascience.com/folium-and-choropleth-map-from-zero-to-pro-6127f9e68564)
-    scale = (df_municipalities['amount_charged'].quantile((0.5, 0.6, 0.7, 0.8, 0.9, 1))).tolist()
-    ## end
-    folium.Choropleth(geo_data='moscow_geometry.geojson', data=df_municipalities, columns=['district', 'amount_charged']
-                      , key_on='feature.properties.district'
-                      , fill_color='YlOrRd'
-                      , nan_fill_color="White"
-                      , threshold_scale=scale
-                      ).add_to(map)
+    cho = folium.Choropleth(geo_data=geojson, data=df_municipalities, columns=merge_col
+                            , key_on=keys
+                            , fill_color='YlOrRd'
+                            , nan_fill_color="White"
+                            , legend_name=legend
+                            ).add_to(map)
     folium_static(map)
+
+with st.echo(code_location='bellow'):
+    '''### Теперь давайте посмотрим на заказы в разрезе дня недели и времени дня'''
+    df_weekday_time = df_final.groupby(['day_of_week', 'Times_of_Day'], as_index=False) \
+        .agg({'id': 'count', 'amount_charged': 'mean'})
+    ''''''
+    fig1 = go.Figure(data=[go.Bar(name='Количество заказов', x=
+    df_weekday_time[df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['Times_of_Day']
+                                  , y=df_weekday_time[
+            df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['id'])
+        , go.Bar(name='Cредний чек', x=df_weekday_time[
+            df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['Times_of_Day']
+                 , y=df_weekday_time[
+                df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['amount_charged'])])
+
+    frames = []
+    steps = []
+    for days in list(df_weekday_time['day_of_week'].unique())[1:]:
+        df_weekday_time_day = df_weekday_time[df_weekday_time['day_of_week'] == days]
+        frames.append(go.Frame(data=[go.Bar(name='Количество заказов', x=df_weekday_time_day['Times_of_Day']
+                                            , y=df_weekday_time_day['id'])
+            , go.Bar(name='Cредний чек', x=df_weekday_time_day['Times_of_Day']
+                     , y=df_weekday_time_day['amount_charged'])], name=days))
+    for days in list(df_weekday_time['day_of_week'].unique()):
+        step = dict(
+            label=days,
+            method="animate",
+            args=[[days]]
+        )
+        steps.append(step)
+    sliders = [dict(
+        currentvalue={"prefix": "День недели", "font": {"size": 20}},
+        len=0.9,
+        x=0.1,
+        pad={"b": 10, "t": 50},
+        steps=steps,
+    )]
+    fig1.update_layout(title="Количество заказов и средний чек по дням недели",
+                       xaxis_title="Ось X",
+                       yaxis_title="Ось Y",
+                       updatemenus=[dict(direction="left",
+                                         pad={"r": 10, "t": 80},
+                                         x=0.1,
+                                         xanchor="right",
+                                         y=0,
+                                         yanchor="top",
+                                         showactive=False,
+                                         type="buttons",
+                                         buttons=[dict(label="►", method="animate", args=[None, {"fromcurrent": True}]),
+                                                  dict(label="❚❚", method="animate",
+                                                       args=[[None], {"frame": {"duration": 0, "redraw": False},
+                                                                      "mode": "immediate",
+                                                                      "transition": {"duration": 0}}])])],
+                       )
+
+    fig1.layout.sliders = sliders
+    fig1.frames = frames
+    st.plotly_chart(fig1)
