@@ -252,7 +252,6 @@ with st.echo(code_location='below'):
                             ).add_to(map)
     folium_static(map)
 
-with st.echo(code_location='bellow'):
     '''### Теперь давайте посмотрим на заказы в разрезе дня недели и времени дня'''
     df_weekday_time = df_final.groupby(['day_of_week', 'Times_of_Day'], as_index=False) \
         .agg({'id': 'count', 'amount_charged': 'mean'})
