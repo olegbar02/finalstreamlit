@@ -149,7 +149,7 @@ with st.echo(code_location='below'):
     map = folium.Map(location=[55.753544, 37.621211], zoom_start=10)
 
     ## From (https://towardsdatascience.com/folium-and-choropleth-map-from-zero-to-pro-6127f9e68564)
-    scale = (df_municipalities['amount_charged'].quantile((0,0.2,0.4,0.6,0.8,1))).tolist()
+    scale = (df_municipalities['amount_charged'].quantile((0,0.1,0.3,0.5,0.6, 0.7, 0.8, 0.9, 1))).tolist()
     ## end
     folium.Choropleth(geo_data='moscow_geometry.geojson', data=df_municipalities, columns=['district','amount_charged']
                       , key_on='feature.properties.district'
