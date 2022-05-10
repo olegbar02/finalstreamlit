@@ -14,7 +14,9 @@ import plotly.graph_objects as go
 import plotly.express as px
 import geopandas
 from geopy import distance
-from shapely.geometry import Point, MultiPolygon
+from shapely.geometry import Point, MultiPolygon, Polygon
+import pydeck as pdk
+from plotly.subplots import make_subplots
 from shapely.wkt import dumps, loads
 
 with st.echo(code_location='below'):
@@ -23,21 +25,21 @@ with st.echo(code_location='below'):
     Один нехороший аналитик сервиса Яндекс.Еда слил данные заказов пользователей в открытый доступ
     Но давайте будем хорошими аналитиками и проанализируем данные о заказах пользователей сервиса Яндекс.Еда
     
-    Для начала возьмем исходный датасет и удалим из него персональные данные: адрес, имя пользователя, телефон
+    Я взял этот датасет и удалим из него персональные данные: адрес, имя пользователя, телефон
     """
 
 
-    @st.cache()
+    @st.experimental_singleton()
     def get_data():
         data_url = 'yangodatanorm 3.csv.zip'
-        return pd.read_csv(data_url)[:30000]
+        return pd.read_csv(data_url)[:50000]
 
 
     initial_df = get_data()
-    initial_df[:100]
+    initial_df[:100].drop('Unnamed: 0', axis=1)
     df = initial_df.copy(deep=True)
     st.write(len(df))
-with st.echo(code_location='above'):
+with st.echo(code_location='below'):
     """
         После этого добавим некоторую дополнительную информацию для наших заказов
         День недели, время дня, административный округ, расстояние до центра Москвы 
@@ -68,7 +70,7 @@ with st.echo(code_location='above'):
     df['distance_from_center'] = dist
 
 
-    @st.cache(persist=True)
+    @st.experimental_singleton()
     def get_districts():
         # Здесь мы получаем данные о полигонах московских административных округов и районов
         # source (http://osm-boundaries.com)
@@ -102,7 +104,7 @@ with st.echo(code_location='above'):
     df['coords'] = df[['location_latitude', 'location_longitude']].apply(lambda x: get_coords(*x), axis=1)
 
 
-    @st.cache(allow_output_mutation=True)
+    @st.experimental_memo
     def get_municipality():
         new_df = df.copy(deep=True)
         for idx, row in new_df.iterrows():
@@ -123,7 +125,7 @@ with st.echo(code_location='above'):
     full_df.dropna(subset='district', inplace=True)
 
 
-    @st.cache()
+    @st.experimental_singleton()
     def final_df():
         d = full_df.drop(['coords'], axis=1).copy(deep=True)
         return d
@@ -248,30 +250,52 @@ with st.echo(code_location='below'):
                             , fill_color='YlOrRd'
                             , nan_fill_color="White"
                             , legend_name=legend
-                            , tooltip = merge_col
+                            , tooltip='amount_charged'
                             ).add_to(map)
     folium_static(map)
 
     '''### Теперь давайте посмотрим на заказы в разрезе дня недели и времени дня'''
     df_weekday_time = df_final.groupby(['day_of_week', 'Times_of_Day'], as_index=False) \
         .agg({'id': 'count', 'amount_charged': 'mean'})
+
+    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Friday', 'Пятница', inplace=True)
+    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Monday', 'Понедельник', inplace=True)
+    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Tuesday', 'Вторник', inplace=True)
+    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Wednesday', 'Среда', inplace=True)
+    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Thursday', 'Четверг', inplace=True)
+    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Saturday', 'Суббота', inplace=True)
+    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Sunday', 'Воскресенье', inplace=True)
+    ## FROM (http://blog.quizzicol.com/2016/10/03/sorting-dates-in-python-by-day-of-week/)
+    sorter = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+    sorterIndex = dict(zip(sorter, range(len(sorter))))
+    df_weekday_time['day_of_week_id'] = df_weekday_time['day_of_week'].map(sorterIndex)
+
+    sorter2 = ['утро', 'день', 'вечер', 'ночь']
+    sorterIndex2 = dict(zip(sorter2, range(len(sorter2))))
+    df_weekday_time['time_id'] = df_weekday_time['Times_of_Day'].map(sorterIndex2)
+    df_weekday_time.sort_values(['day_of_week_id', 'time_id'], inplace=True)
+    ## END
+
     fig1 = go.Figure(data=[go.Bar(name='Количество заказов', x=
     df_weekday_time[df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['Times_of_Day']
                                   , y=df_weekday_time[
-            df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['id'])
+            df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['id'], yaxis='y'
+                                  , offsetgroup=1)
         , go.Bar(name='Cредний чек', x=df_weekday_time[
             df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['Times_of_Day']
                  , y=df_weekday_time[
-                df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['amount_charged'])])
+                df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['amount_charged']
+                 ,yaxis="y2", offsetgroup=2)])
 
     frames = []
     steps = []
     for days in list(df_weekday_time['day_of_week'].unique())[1:]:
         df_weekday_time_day = df_weekday_time[df_weekday_time['day_of_week'] == days]
         frames.append(go.Frame(data=[go.Bar(name='Количество заказов', x=df_weekday_time_day['Times_of_Day']
-                                            , y=df_weekday_time_day['id'])
+                                            , y=df_weekday_time_day['id'], yaxis='y'
+                                  , offsetgroup=1)
             , go.Bar(name='Cредний чек', x=df_weekday_time_day['Times_of_Day']
-                     , y=df_weekday_time_day['amount_charged'])], name=days))
+                     , y=df_weekday_time_day['amount_charged'], yaxis="y2", offsetgroup=2)], name=days))
     for days in list(df_weekday_time['day_of_week'].unique()):
         step = dict(
             label=days,
@@ -280,15 +304,25 @@ with st.echo(code_location='below'):
         )
         steps.append(step)
     sliders = [dict(
-        currentvalue={"prefix": "День недели", "font": {"size": 20}},
+        currentvalue={"prefix": "День недели: ", "font": {"size": 16}},
         len=0.9,
         x=0.1,
         pad={"b": 10, "t": 50},
         steps=steps,
     )]
     fig1.update_layout(title="Количество заказов и средний чек по дням недели",
-                       xaxis_title="Ось X",
-                       yaxis_title="Ось Y",
+                       barmode='group',
+
+                       xaxis_title="Время дня",
+                       yaxis=dict(
+                           title="Количество заказов"
+                       ),
+                       yaxis2=dict(
+                           title="Средний чек",
+                           overlaying="y",
+                           side="right"
+                       ),
+                       ##FROM (https://habr.com/ru/post/502958/)
                        updatemenus=[dict(direction="left",
                                          pad={"r": 10, "t": 80},
                                          x=0.1,
@@ -302,8 +336,12 @@ with st.echo(code_location='below'):
                                                        args=[[None], {"frame": {"duration": 0, "redraw": False},
                                                                       "mode": "immediate",
                                                                       "transition": {"duration": 0}}])])],
+                       ##END
+                       legend_x=1.12
                        )
 
     fig1.layout.sliders = sliders
     fig1.frames = frames
     st.plotly_chart(fig1)
+
+
