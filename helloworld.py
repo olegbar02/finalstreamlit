@@ -36,7 +36,8 @@ with st.echo(code_location='below'):
 
 
     initial_df = get_data()
-    initial_df[:100].drop('Unnamed: 0', axis=1)
+    initial_df.drop('Unnamed: 0', axis=1)
+    st.write(initial_df)
     df = initial_df.copy(deep=True)
     st.write(len(df))
 with st.echo(code_location='below'):
