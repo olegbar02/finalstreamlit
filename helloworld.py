@@ -148,7 +148,7 @@ with st.echo(code_location='below'):
     sorterIndex2 = dict(zip(sorter2, range(len(sorter2))))
     df_final['time_id'] = df_final['Times_of_Day'].map(sorterIndex2)
     df_final.sort_values(['day_of_week_id', 'time_id'], inplace=True)
-    df_final.dropna(inplace=True)
+
     """
     #### Теперь будем рисовать. Давайте сначала просто посмотрим, как наши заказы выглядят на карте 
     """
