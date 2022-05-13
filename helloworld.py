@@ -432,21 +432,21 @@ with st.echo(code_location='below'):
     morning, day = st.columns(2)
     with morning:
         """#### Утро"""
-        df_morn = df_final.query(query1)
+        df_morn = df_final.query(query1).dropna(["location_longitude", "location_latitude"], axis=1)
         get_map(df_morn)
         """#### Вечер"""
-        df_day = df_final.query(query3)
+        df_day = df_final.query(query3).dropna(["location_longitude", "location_latitude"], axis=1)
         get_map(df_day)
     with day:
         """#### День"""
-        df_eve = df_final.query(query2)
+        df_eve = df_final.query(query2).dropna(["location_longitude", "location_latitude"], axis=1)
         get_map(df_eve)
         """#### Ночь"""
-        df_night = df_final.query(query4)
+        df_night = df_final.query(query4).dropna(["location_longitude", "location_latitude"], axis=1)
         get_map(df_night)
 
 
-    """Теперь давайте посмотрим на зависимость среднего чека от """
+    """### Теперь давайте посмотрим на зависимость среднего чека от """
     df_dist=df_final.query('distance_from_center<100')
     base = alt.Chart(df_dist).mark_circle(color="black").encode(
         alt.X("distance_from_center"), alt.Y("amount_charged"))
@@ -461,7 +461,14 @@ with st.echo(code_location='below'):
 
     st.altair_chart(alt.layer(base, *polynomial_fit))
 
-    st.pyplot(sns.regplot(df_dist['distance_from_center'], df_dist['amount_charged']))
+    st.pyplot(sns.regplot(df_dist['distance_from_center'], df_dist['amount_charged']).figure)
+
+    """### Посмотрим пользователи каких устройств больше пользуются Яндекс Едой"""
+    df_final['os']='Other'
+    df_final['os'].mask(df_final['user_agent'].str.contains('ios'), 'IOS', inplace=True)
+    df_final['os'].mask(df_final['user_agent'].str.contains('android'), 'Android', inplace=True)
+
+
 
 
 
