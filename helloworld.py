@@ -432,17 +432,17 @@ with st.echo(code_location='below'):
     morning, day = st.columns(2)
     with morning:
         """#### Утро"""
-        df_morn = df_final.query(query1).sample(frac=0.3)
+        df_morn = df_final.query(query1)
         get_map(df_morn)
         """#### Вечер"""
-        df_day = df_final.query(query3).sample(frac=0.3)
+        df_day = df_final.query(query3)
         get_map(df_day)
     with day:
         """#### День"""
-        df_eve = df_final.query(query2).sample(frac=0.3)
+        df_eve = df_final.query(query2)
         get_map(df_eve)
         """#### Ночь"""
-        df_night = df_final.query(query4).sample(frac=0.3)
+        df_night = df_final.query(query4)
         get_map(df_night)
 
 
@@ -460,6 +460,9 @@ with st.echo(code_location='below'):
         for order in [1, 3, 5]]
 
     st.altair_chart(alt.layer(base, *polynomial_fit))
+
+    st.pyplot(sns.relplot(df_dist['distance_from_center'], df_dist['amount_charged']))
+
 
 
 
