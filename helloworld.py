@@ -446,27 +446,48 @@ with st.echo(code_location='below'):
         get_map(df_night)
 
 
-    """### Теперь давайте посмотрим на зависимость среднего чека от """
+    """### Теперь давайте посмотрим на зависимость среднего чека и количество заказов от расстояния до центра"""
     df_dist=df_final.query('distance_from_center<100')
-    base = alt.Chart(df_dist).mark_circle(color="black").encode(
-        alt.X("distance_from_center"), alt.Y("amount_charged"))
-    polynomial_fit = [
-        base.transform_regression(
-            "distance_from_center", "amount_charged", method="poly", order=order, as_=["distance_from_center", str(order)]
-        )
-            .mark_line()
-            .transform_fold([str(order)], as_=["degree", "amount_charged"])
-            .encode(alt.Color("degree:N"))
-        for order in [1, 3, 5]]
+    coll1, coll2 = st.columns(2)
+    with coll1:
+        """#### По среднему чеку"""
+        ## From(https://altair-viz.github.io/gallery/poly_fit_regression.html
+        base = alt.Chart(df_dist).mark_circle(color="black").encode(
+            alt.X("distance_from_center"), alt.Y("amount_charged"))
+        polynomial_fit = [
+            base.transform_regression(
+                "distance_from_center", "amount_charged", method="poly", order=order, as_=["distance_from_center", str(order)]
+            )
+                .mark_line()
+                .transform_fold([str(order)], as_=["degree", "amount_charged"])
+                .encode(alt.Color("degree:N"))
+            for order in [1, 3, 5]]
+        #end
+        st.altair_chart(alt.layer(base, *polynomial_fit))
+    with coll2:
+        """#### Количество заказов"""
+        base = alt.Chart(df_dist.groupby('distance_from_center', as_index=False).count()).mark_circle(color="black").encode(
+            alt.X("distance_from_center"), alt.Y("count"))
+        polynomial_fit = [
+            base.transform_regression(
+                "distance_from_center", "count", method="poly", order=order,
+                as_=["distance_from_center", str(order)]
+            )
+                .mark_line()
+                .transform_fold([str(order)], as_=["degree", "count"])
+                .encode(alt.Color("degree:N"))
+            for order in [1, 3, 5]]
+        # end
+        st.altair_chart(alt.layer(base, *polynomial_fit))
 
-    st.altair_chart(alt.layer(base, *polynomial_fit))
-
-    st.pyplot(sns.regplot(df_dist['distance_from_center'], df_dist['amount_charged']).figure)
 
     """### Посмотрим пользователи каких устройств больше пользуются Яндекс Едой"""
     df_final['os']='Other'
     df_final['os'].mask(df_final['user_agent'].str.contains('ios'), 'IOS', inplace=True)
     df_final['os'].mask(df_final['user_agent'].str.contains('android'), 'Android', inplace=True)
+
+    df_os = df_final.groupby('os', as_index=False).count()
+    px.pie(df_final)
 
 
 
