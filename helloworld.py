@@ -432,17 +432,17 @@ with st.echo(code_location='below'):
     morning, day = st.columns(2)
     with morning:
         """#### Утро"""
-        df_morn = df_final.query(query1).dropna(subset=["location_longitude", "location_latitude"], axis=1)
+        df_morn = df_final.query(query1).dropna()
         get_map(df_morn)
         """#### Вечер"""
-        df_day = df_final.query(query3).dropna(subset=["location_longitude", "location_latitude"], axis=1)
+        df_day = df_final.query(query3).dropna()
         get_map(df_day)
     with day:
         """#### День"""
-        df_eve = df_final.query(query2).dropna(subset=["location_longitude", "location_latitude"], axis=1)
+        df_eve = df_final.query(query2).dropna()
         get_map(df_eve)
         """#### Ночь"""
-        df_night = df_final.query(query4).dropna(subset=["location_longitude", "location_latitude"], axis=1)
+        df_night = df_final.query(query4).dropna()
         get_map(df_night)
 
 
