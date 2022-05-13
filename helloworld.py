@@ -32,7 +32,7 @@ with st.echo(code_location='below'):
     @st.experimental_singleton()
     def get_data():
         data_url = 'yangodatanorm 3.csv.zip'
-        return pd.read_csv(data_url).sample(frac=0.2, random_state=5)
+        return pd.read_csv(data_url).sample(frac=0.2)
 
 
     initial_df = get_data()
@@ -68,7 +68,7 @@ with st.echo(code_location='below'):
 
 
     dist = get_distance()
-    df['distance_from_center'] = np.round(dist, 1)
+    df['distance_from_center'] = dist
 
 
     @st.experimental_singleton()
@@ -131,6 +131,8 @@ with st.echo(code_location='below'):
     full_df['day_of_week'].mask(full_df['day_of_week'] == 'Thursday', 'Четверг', inplace=True)
     full_df['day_of_week'].mask(full_df['day_of_week'] == 'Saturday', 'Суббота', inplace=True)
     full_df['day_of_week'].mask(full_df['day_of_week'] == 'Sunday', 'Воскресенье', inplace=True)
+
+
     @st.experimental_singleton()
     def final_df():
         d = full_df.drop(['coords'], axis=1).copy(deep=True)
@@ -139,7 +141,14 @@ with st.echo(code_location='below'):
 
     df_final = final_df()
     df_final
-
+    sorter = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+    sorterIndex = dict(zip(sorter, range(len(sorter))))
+    df_final['day_of_week_id'] = df_final['day_of_week'].map(sorterIndex)
+    sorter2 = ['утро', 'день', 'вечер', 'ночь']
+    sorterIndex2 = dict(zip(sorter2, range(len(sorter2))))
+    df_final['time_id'] = df_final['Times_of_Day'].map(sorterIndex2)
+    df_final.sort_values(['day_of_week_id', 'time_id'], inplace=True)
+    df_final.dropna(inplace=True)
     """
     #### Теперь будем рисовать. Давайте сначала просто посмотрим, как наши заказы выглядят на карте 
     """
@@ -423,22 +432,34 @@ with st.echo(code_location='below'):
     morning, day = st.columns(2)
     with morning:
         """#### Утро"""
-        df_morn = df_final.query(query1).sample(frac=0.3, random_state=5)
+        df_morn = df_final.query(query1).sample(frac=0.3)
         get_map(df_morn)
         """#### Вечер"""
-        df_day = df_final.query(query3).sample(frac=0.3, random_state=5)
+        df_day = df_final.query(query3).sample(frac=0.3)
         get_map(df_day)
     with day:
         """#### День"""
-        df_eve = df_final.query(query2).sample(frac=0.3, random_state=5)
+        df_eve = df_final.query(query2).sample(frac=0.3)
         get_map(df_eve)
         """#### Ночь"""
-        df_night = df_final.query(query4).sample(frac=0.3, random_state=5)
+        df_night = df_final.query(query4).sample(frac=0.3)
         get_map(df_night)
 
 
     """Теперь давайте посмотрим на зависимость среднего чека от """
+    df_dist=df_final.query('distance_from_center<100')
+    base = alt.Chart(df_dist).mark_circle(color="black").encode(
+        alt.X("distance_from_center"), alt.Y("amount_charged"))
+    polynomial_fit = [
+        base.transform_regression(
+            "distance_from_center", "amount_charged", method="poly", order=order, as_=["distance_from_center", str(order)]
+        )
+            .mark_line()
+            .transform_fold([str(order)], as_=["degree", "amount_charged"])
+            .encode(alt.Color("degree:N"))
+        for order in [1, 3, 5]]
 
+    st.altair_chart(alt.layer(base, *polynomial_fit))
 
 
 
