@@ -16,6 +16,7 @@ import geopandas
 from geopy import distance
 from shapely.geometry import Point, MultiPolygon, Polygon
 import pydeck as pdk
+
 from plotly.subplots import make_subplots
 from shapely.wkt import dumps, loads
 st.set_page_config(layout="wide")
@@ -466,15 +467,17 @@ with st.echo(code_location='below'):
         st.altair_chart(alt.layer(base, *polynomial_fit))
     with coll2:
         """#### Количество заказов"""
-        base = alt.Chart(df_dist.groupby('distance_from_center', as_index=False).count()).mark_circle(color="black").encode(
-            alt.X("distance_from_center"), alt.Y("count"))
+        df_dist_2 = df_dist.groupby('distance_from_center', as_index=False).agg({'id':'count'})
+        df_dist_2['distance_from_center'] = np.round(df_dist_2['distance_from_center'], 0)
+        base = alt.Chart(df_dist.groupby('distance_from_center', as_index=False).agg({'id':'count'})).mark_circle(color="black").encode(
+            alt.X("distance_from_center"), alt.Y("id"))
         polynomial_fit = [
             base.transform_regression(
                 "distance_from_center", "count", method="poly", order=order,
                 as_=["distance_from_center", str(order)]
             )
                 .mark_line()
-                .transform_fold([str(order)], as_=["degree", "count"])
+                .transform_fold([str(order)], as_=["degree", "id"])
                 .encode(alt.Color("degree:N"))
             for order in [1, 3, 5]]
         # end
@@ -486,8 +489,8 @@ with st.echo(code_location='below'):
     df_final['os'].mask(df_final['user_agent'].str.contains('ios'), 'IOS', inplace=True)
     df_final['os'].mask(df_final['user_agent'].str.contains('android'), 'Android', inplace=True)
 
-    df_os = df_final.groupby('os', as_index=False).count()
-    px.pie(df_final)
+    df_os = df_final.groupby('os', as_index=False).agg({'id':'count'})
+    st.plotly_chart(px.pie(df_os, names='os', values='id'))
 
 
 
