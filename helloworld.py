@@ -349,7 +349,7 @@ with st.echo(code_location='below'):
 
     ## From (https://github.com/streamlit/demo-uber-nyc-pickups/blob/main/streamlit_app.py)
     def pydeckmap(data, lat, lon, zoom):
-        st.write(
+        return st.pydeck_chart(
             pdk.Deck(
                 map_style="mapbox://styles/mapbox/light-v9",
                 initial_view_state={
@@ -373,5 +373,5 @@ with st.echo(code_location='below'):
                 )
             )
         ## End
-        st.pydeck_chart(pydeckmap(df_final, 55.753544, 37.621211, 10))
+        pydeckmap(df_final, 55.753544, 37.621211, 10)
 
