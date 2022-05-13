@@ -18,21 +18,21 @@ from shapely.geometry import Point, MultiPolygon, Polygon
 import pydeck as pdk
 from plotly.subplots import make_subplots
 from shapely.wkt import dumps, loads
-
+st.set_page_config(layout="wide")
 with st.echo(code_location='below'):
     """
     # Анализ данных слива Яндекс.Еды 
     Один нехороший аналитик сервиса Яндекс.Еда слил данные заказов пользователей в открытый доступ
     Но давайте будем хорошими аналитиками и проанализируем данные о заказах пользователей сервиса Яндекс.Еда
     
-    Я взял этот датасет и удалим из него персональные данные: адрес, имя пользователя, телефон
+    Я взял этот датасет и удалил из него персональные данные: адрес, имя пользователя, телефон
     """
 
 
     @st.experimental_singleton()
     def get_data():
         data_url = 'yangodatanorm 3.csv.zip'
-        return pd.read_csv(data_url)[:50000]
+        return pd.read_csv(data_url).sample(frac=0.2, random_state=5)
 
 
     initial_df = get_data()
@@ -68,7 +68,7 @@ with st.echo(code_location='below'):
 
 
     dist = get_distance()
-    df['distance_from_center'] = dist
+    df['distance_from_center'] = np.round(dist, 1)
 
 
     @st.experimental_singleton()
@@ -124,8 +124,13 @@ with st.echo(code_location='below'):
     full_df = get_municipality()
     """Я хочу анализировать только Москву, поэтому удалю заказы не из Москвы"""
     full_df.dropna(subset='district', inplace=True)
-
-
+    full_df['day_of_week'].mask(full_df['day_of_week'] == 'Friday', 'Пятница', inplace=True)
+    full_df['day_of_week'].mask(full_df['day_of_week'] == 'Monday', 'Понедельник', inplace=True)
+    full_df['day_of_week'].mask(full_df['day_of_week'] == 'Tuesday', 'Вторник', inplace=True)
+    full_df['day_of_week'].mask(full_df['day_of_week'] == 'Wednesday', 'Среда', inplace=True)
+    full_df['day_of_week'].mask(full_df['day_of_week'] == 'Thursday', 'Четверг', inplace=True)
+    full_df['day_of_week'].mask(full_df['day_of_week'] == 'Saturday', 'Суббота', inplace=True)
+    full_df['day_of_week'].mask(full_df['day_of_week'] == 'Sunday', 'Воскресенье', inplace=True)
     @st.experimental_singleton()
     def final_df():
         d = full_df.drop(['coords'], axis=1).copy(deep=True)
@@ -134,17 +139,17 @@ with st.echo(code_location='below'):
 
     df_final = final_df()
     df_final
-with st.echo(code_location='below'):
+
     """
     #### Теперь будем рисовать. Давайте сначала просто посмотрим, как наши заказы выглядят на карте 
     """
 
-    m = folium.Map(location=[55.753544, 37.621211], zoom_start=10)
+    m = folium.Map(location=[55.753544, 37.621211], zoom_start=10, width=1200)
     FastMarkerCluster(
         data=[[lat, lon] for lat, lon in zip(df_final['location_latitude'], df_final['location_longitude'])]
         , name='Заказы').add_to(m)
 
-    folium_static(m)
+    folium_static(m, width=1200)
     """ Давайте посмотрим на заказы в разрезе муниципалитета
     , административного округа по среднему чеку и по количеству"""
     col1, col2 = st.columns(2)
@@ -244,7 +249,7 @@ with st.echo(code_location='below'):
         # )
         ##END
 
-    map = folium.Map(location=[55.753544, 37.621211], zoom_start=10)
+    map = folium.Map(location=[55.753544, 37.621211], zoom_start=10, width=1500)
 
     cho = folium.Choropleth(geo_data=geojson, data=df_municipalities, columns=merge_col
                             , key_on=keys
@@ -252,20 +257,21 @@ with st.echo(code_location='below'):
                             , nan_fill_color="White"
                             , legend_name=legend
                             , tooltip='amount_charged'
+
                             ).add_to(map)
-    folium_static(map)
+    folium_static(map, width=1200)
 
     '''#### Теперь давайте посмотрим на заказы в разрезе дня недели и времени дня'''
     df_weekday_time = df_final.groupby(['day_of_week', 'Times_of_Day'], as_index=False) \
         .agg({'id': 'count', 'amount_charged': 'mean'})
 
-    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Friday', 'Пятница', inplace=True)
-    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Monday', 'Понедельник', inplace=True)
-    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Tuesday', 'Вторник', inplace=True)
-    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Wednesday', 'Среда', inplace=True)
-    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Thursday', 'Четверг', inplace=True)
-    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Saturday', 'Суббота', inplace=True)
-    df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Sunday', 'Воскресенье', inplace=True)
+    # df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Friday', 'Пятница', inplace=True)
+    # df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Monday', 'Понедельник', inplace=True)
+    # df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Tuesday', 'Вторник', inplace=True)
+    # df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Wednesday', 'Среда', inplace=True)
+    # df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Thursday', 'Четверг', inplace=True)
+    # df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Saturday', 'Суббота', inplace=True)
+    # df_weekday_time['day_of_week'].mask(df_weekday_time['day_of_week'] == 'Sunday', 'Воскресенье', inplace=True)
     ## FROM (http://blog.quizzicol.com/2016/10/03/sorting-dates-in-python-by-day-of-week/)
     sorter = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
     sorterIndex = dict(zip(sorter, range(len(sorter))))
@@ -338,7 +344,7 @@ with st.echo(code_location='below'):
                                                                       "mode": "immediate",
                                                                       "transition": {"duration": 0}}])])],
                        ##END
-                       legend_x=1.12
+                       legend_x=1.12, width=1200
                        )
 
     fig1.layout.sliders = sliders
@@ -348,13 +354,14 @@ with st.echo(code_location='below'):
     """#### Теперь давайте посмотрим на тоже самое на карте"""
 
     ## From (https://github.com/streamlit/demo-uber-nyc-pickups/blob/main/streamlit_app.py)
-    st.pydeck_chart(
-        pdk.Deck(
+    def get_map(data):
+        st.pydeck_chart(
+            pdk.Deck(
             map_style="mapbox://styles/mapbox/light-v9",
             initial_view_state={
-                "latitude": lat,
-                "longitude": lon,
-                "zoom": zoom,
+                "latitude": 55.753544,
+                "longitude": 37.621211,
+                "zoom": 10,
                 "pitch": 50,
             },
             layers=[
@@ -362,14 +369,77 @@ with st.echo(code_location='below'):
                     "HexagonLayer",
                     data=data,
                     get_position=["location_longitude", "location_latitude"],
-                    radius=10,
+                    radius=120,
                     elevation_scale=4,
                     elevation_range=[0, 1000],
                     pickable=True,
                     extruded=True,
                 ),
             ],
-        )
+        ), use_container_width=True
     )
     ## End
+
+    day = st.select_slider('Выберете день недели', df_final['day_of_week'].unique())
+    ## если что это не я дурак, а пандас, потому что не находил иначе нужную часть датасета
+    if day == 'Понедельник':
+        query1 = 'day_of_week=="Понедельник" and Times_of_Day=="утро"'
+        query2 = 'day_of_week=="Понедельник" and Times_of_Day=="день"'
+        query3 = 'day_of_week=="Понедельник" and Times_of_Day=="вечер"'
+        query4 = 'day_of_week=="Понедельник" and Times_of_Day=="ночь"'
+    elif day == 'Вторник':
+        query1 = 'day_of_week=="Вторник" and Times_of_Day=="утро"'
+        query2 = 'day_of_week=="Вторник" and Times_of_Day=="день"'
+        query3 = 'day_of_week=="Вторник" and Times_of_Day=="вечер"'
+        query4 = 'day_of_week=="Вторник" and Times_of_Day=="ночь"'
+    elif day == 'Среда':
+        query1 = 'day_of_week=="Среда" and Times_of_Day=="утро"'
+        query2 = 'day_of_week=="Среда" and Times_of_Day=="день"'
+        query3 = 'day_of_week=="Среда" and Times_of_Day=="вечер"'
+        query4 = 'day_of_week=="Среда" and Times_of_Day=="ночь"'
+    elif day == 'Четверг':
+        query1 = 'day_of_week=="Четверг" and Times_of_Day=="утро"'
+        query2 = 'day_of_week=="Четверг" and Times_of_Day=="день"'
+        query3 = 'day_of_week=="Четверг" and Times_of_Day=="вечер"'
+        query4 = 'day_of_week=="Четверг" and Times_of_Day=="ночь"'
+    elif day == 'Пятница':
+        query1 = 'day_of_week=="Пятница" and Times_of_Day=="утро"'
+        query2 = 'day_of_week=="Пятница" and Times_of_Day=="день"'
+        query3 = 'day_of_week=="Пятница" and Times_of_Day=="вечер"'
+        query4 = 'day_of_week=="Пятница" and Times_of_Day=="ночь"'
+    elif day == 'Суббота':
+        query1 = 'day_of_week=="Суббота" and Times_of_Day=="утро"'
+        query2 = 'day_of_week=="Суббота" and Times_of_Day=="день"'
+        query3 = 'day_of_week=="Суббота" and Times_of_Day=="вечер"'
+        query4 = 'day_of_week=="Суббота" and Times_of_Day=="ночь"'
+    elif day == 'Воскресенье':
+        query1 = 'day_of_week=="Воскресенье" and Times_of_Day=="утро"'
+        query2 = 'day_of_week=="Воскресенье" and Times_of_Day=="день"'
+        query3 = 'day_of_week=="Воскресенье" and Times_of_Day=="вечер"'
+        query4 = 'day_of_week=="Воскресенье" and Times_of_Day=="ночь"'
+
+
+
+    morning, day = st.columns(2)
+    with morning:
+        """#### Утро"""
+        df_morn = df_final.query(query1).sample(frac=0.3, random_state=5)
+        get_map(df_morn)
+        """#### Вечер"""
+        df_day = df_final.query(query3).sample(frac=0.3, random_state=5)
+        get_map(df_day)
+    with day:
+        """#### День"""
+        df_eve = df_final.query(query2).sample(frac=0.3, random_state=5)
+        get_map(df_eve)
+        """#### Ночь"""
+        df_night = df_final.query(query4).sample(frac=0.3, random_state=5)
+        get_map(df_night)
+
+
+    """Теперь давайте посмотрим на зависимость среднего чека от """
+
+
+
+
 
