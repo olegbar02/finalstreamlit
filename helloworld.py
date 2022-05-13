@@ -373,5 +373,5 @@ with st.echo(code_location='below'):
                 )
             )
         ## End
-        pydeckmap(df_final, 55.753544, 37.621211, 10)
+        st.pydeck_chart(pydeckmap(df_final, 55.753544, 37.621211, 10))
 
