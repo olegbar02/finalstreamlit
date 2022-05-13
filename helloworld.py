@@ -348,30 +348,28 @@ with st.echo(code_location='below'):
     """#### Теперь давайте посмотрим на тоже самое на карте"""
 
     ## From (https://github.com/streamlit/demo-uber-nyc-pickups/blob/main/streamlit_app.py)
-    def pydeckmap(data, lat, lon, zoom):
-        return st.pydeck_chart(
-            pdk.Deck(
-                map_style="mapbox://styles/mapbox/light-v9",
-                initial_view_state={
-                    "latitude": lat,
-                    "longitude": lon,
-                    "zoom": zoom,
-                    "pitch": 50,
-                },
-                layers=[
-                    pdk.Layer(
-                        "HexagonLayer",
-                        data=data,
-                        get_position=["location_longitude", "location_latitude"],
-                        radius=10,
-                        elevation_scale=4,
-                        elevation_range=[0, 1000],
-                        pickable=True,
-                        extruded=True,
-                    ),
-                ],
-                )
-            )
-        ## End
-        pydeckmap(df_final, 55.753544, 37.621211, 10)
+    st.pydeck_chart(
+        pdk.Deck(
+            map_style="mapbox://styles/mapbox/light-v9",
+            initial_view_state={
+                "latitude": lat,
+                "longitude": lon,
+                "zoom": zoom,
+                "pitch": 50,
+            },
+            layers=[
+                pdk.Layer(
+                    "HexagonLayer",
+                    data=data,
+                    get_position=["location_longitude", "location_latitude"],
+                    radius=10,
+                    elevation_scale=4,
+                    elevation_range=[0, 1000],
+                    pickable=True,
+                    extruded=True,
+                ),
+            ],
+        )
+    )
+    ## End
 
