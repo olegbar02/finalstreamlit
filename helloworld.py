@@ -461,7 +461,7 @@ with st.echo(code_location='below'):
 
     st.altair_chart(alt.layer(base, *polynomial_fit))
 
-    st.pyplot(sns.relplot(df_dist['distance_from_center'], df_dist['amount_charged']))
+    st.pyplot(sns.regplot(df_dist['distance_from_center'], df_dist['amount_charged']))
 
 
 
