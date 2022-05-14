@@ -493,7 +493,7 @@ with st.echo(code_location='below'):
     df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('android'), 'Android', inplace=True)
     st.write(df_final['user_agent'].unique())
     df_os = df_final.groupby('os', as_index=False).agg({'id':'count'})
-    df_os.rename(columns={'os':'name', 'id':'value'})
+    df_os.rename(columns={'os':'name', 'id':'value'}, inplace=True)
 
     options = {
         "tooltip": {"trigger": "item"},
