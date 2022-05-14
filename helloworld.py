@@ -21,6 +21,7 @@ from streamlit_echarts import st_echarts
 
 from plotly.subplots import make_subplots
 from shapely.wkt import dumps, loads
+
 st.set_page_config(layout="wide")
 with st.echo(code_location='below'):
     """
@@ -73,7 +74,6 @@ with st.echo(code_location='below'):
     # dist = get_distance()
     # df['distance_from_center'] = dist
 
-
     @st.experimental_singleton()
     def get_districts():
         # Здесь мы получаем данные о полигонах московских административных округов и районов
@@ -115,7 +115,7 @@ with st.echo(code_location='below'):
             coord = row.coords
             lat = row.location_latitude
             lon = row.location_longitude
-            new_df.at[idx, 'distance_from_center']=distance.distance((lat, lon), (55.753544, 37.621211)).km
+            new_df.at[idx, 'distance_from_center'] = distance.distance((lat, lon), (55.753544, 37.621211)).km
             for distr, okr, geometry in zip(moscow_geometry_df['district'], moscow_geometry_df['okrug'],
                                             moscow_geometry_df['geometry']):
                 if geometry.contains(coord):
@@ -307,7 +307,7 @@ with st.echo(code_location='below'):
             df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['Times_of_Day']
                  , y=df_weekday_time[
                 df_weekday_time['day_of_week'] == list(df_weekday_time['day_of_week'].unique())[0]]['amount_charged']
-                 ,yaxis="y2", offsetgroup=2)])
+                 , yaxis="y2", offsetgroup=2)])
 
     frames = []
     steps = []
@@ -315,7 +315,7 @@ with st.echo(code_location='below'):
         df_weekday_time_day = df_weekday_time[df_weekday_time['day_of_week'] == days]
         frames.append(go.Frame(data=[go.Bar(name='Количество заказов', x=df_weekday_time_day['Times_of_Day']
                                             , y=df_weekday_time_day['id'], yaxis='y'
-                                  , offsetgroup=1)
+                                            , offsetgroup=1)
             , go.Bar(name='Cредний чек', x=df_weekday_time_day['Times_of_Day']
                      , y=df_weekday_time_day['amount_charged'], yaxis="y2", offsetgroup=2)], name=days))
     for days in list(df_weekday_time['day_of_week'].unique()):
@@ -368,31 +368,34 @@ with st.echo(code_location='below'):
 
     """#### Теперь давайте посмотрим на тоже самое на карте"""
 
+
     ## From (https://github.com/streamlit/demo-uber-nyc-pickups/blob/main/streamlit_app.py)
     def get_map(data):
         st.pydeck_chart(
             pdk.Deck(
-            map_style="mapbox://styles/mapbox/light-v9",
-            initial_view_state={
-                "latitude": 55.753544,
-                "longitude": 37.621211,
-                "zoom": 10,
-                "pitch": 50,
-            },
-            layers=[
-                pdk.Layer(
-                    "HexagonLayer",
-                    data=data,
-                    get_position=["location_longitude", "location_latitude"],
-                    radius=120,
-                    elevation_scale=4,
-                    elevation_range=[0, 1000],
-                    pickable=True,
-                    extruded=True,
-                ),
-            ],
-        ), use_container_width=True
-    )
+                map_style="mapbox://styles/mapbox/light-v9",
+                initial_view_state={
+                    "latitude": 55.753544,
+                    "longitude": 37.621211,
+                    "zoom": 10,
+                    "pitch": 50,
+                },
+                layers=[
+                    pdk.Layer(
+                        "HexagonLayer",
+                        data=data,
+                        get_position=["location_longitude", "location_latitude"],
+                        radius=120,
+                        elevation_scale=4,
+                        elevation_range=[0, 1000],
+                        pickable=True,
+                        extruded=True,
+                    ),
+                ],
+            ), use_container_width=True
+        )
+
+
     ## End
 
     day = st.select_slider('Выберете день недели', df_final['day_of_week'].unique())
@@ -433,8 +436,6 @@ with st.echo(code_location='below'):
         query3 = 'day_of_week=="Воскресенье" and Times_of_Day=="вечер"'
         query4 = 'day_of_week=="Воскресенье" and Times_of_Day=="ночь"'
 
-
-
     morning, day = st.columns(2)
     with morning:
         """#### Утро"""
@@ -451,9 +452,8 @@ with st.echo(code_location='below'):
         df_night = df_final.query(query4).dropna(subset=["location_longitude", "location_latitude"])
         get_map(df_night)
 
-
     """### Теперь давайте посмотрим на зависимость среднего чека и количество заказов от расстояния до центра"""
-    df_dist=df_final.query('distance_from_center<100')
+    df_dist = df_final.query('distance_from_center<100')
     coll1, coll2 = st.columns(2)
     with coll1:
         """#### По среднему чеку"""
@@ -462,19 +462,21 @@ with st.echo(code_location='below'):
             alt.X("distance_from_center"), alt.Y("amount_charged"))
         polynomial_fit = [
             base.transform_regression(
-                "distance_from_center", "amount_charged", method="poly", order=order, as_=["distance_from_center", str(order)]
+                "distance_from_center", "amount_charged", method="poly", order=order,
+                as_=["distance_from_center", str(order)]
             )
                 .mark_line()
                 .transform_fold([str(order)], as_=["degree", "amount_charged"])
                 .encode(alt.Color("degree:N"))
             for order in [1, 3, 5]]
-        #end
+        # end
         st.altair_chart(alt.layer(base, *polynomial_fit))
     with coll2:
         """#### Количество заказов"""
-        df_dist_2 = df_dist.groupby('distance_from_center', as_index=False).agg({'id':'count'})
+        df_dist_2 = df_dist.groupby('distance_from_center', as_index=False).agg({'id': 'count'})
         df_dist_2['distance_from_center'] = np.round(df_dist_2['distance_from_center'], 0)
-        base = alt.Chart(df_dist.groupby('distance_from_center', as_index=False).agg({'id':'count'})).mark_circle(color="black").encode(
+        base = alt.Chart(df_dist.groupby('distance_from_center', as_index=False).agg({'id': 'count'})).mark_circle(
+            color="black").encode(
             alt.X("distance_from_center"), alt.Y("id"))
         polynomial_fit = [
             base.transform_regression(
@@ -488,16 +490,15 @@ with st.echo(code_location='below'):
         # end
         st.altair_chart(alt.layer(base, *polynomial_fit))
 
-
     """### Посмотрим пользователи каких устройств больше пользуются Яндекс Едой"""
-    df_final['os']='Other'
+    df_final['os'] = 'Other'
     df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('ios'), 'IOS', inplace=True)
     df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('iphone'), 'IOS', inplace=True)
     df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('macintosh'), 'Mac OS X', inplace=True)
     df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('windows'), 'Windows', inplace=True)
     df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('android'), 'Android', inplace=True)
-    df_os = df_final.groupby('os', as_index=False).agg({'id':'count'})
-    df_os.rename(columns={'os':'name', 'id':'value'}, inplace=True)
+    df_os = df_final.groupby('os', as_index=False).agg({'id': 'count'})
+    df_os.rename(columns={'os': 'name', 'id': 'value'}, inplace=True)
     ## From (https://share.streamlit.io/andfanilo/streamlit-echarts-demo/master/app.py)
     options = {
         "tooltip": {"trigger": "item"},
@@ -528,25 +529,24 @@ with st.echo(code_location='below'):
     ## END
     """### А пользователи каких устройств больше платят?"""
     df_os_charge = df_final.groupby('os', as_index=False).agg({'amount_charged': 'mean'})
+    ##From (https://echarts.apache.org/examples/en/editor.html?c=bar-simple&lang=js)
     options = {
         "tooltip": {"trigger": "item"},
-        "legend": {"top": "5%", "left": "center"},
+        'xAxis': {
+            'type': 'category',
+            'data': df_os_charge['os'].to_list()
+        },
+        'yAxis': {
+            'type': 'value'
+        },
         "series": [
             {
-                "name": "Количество заказов",
-                "type": "bar",
-                "avoidLabelOverlap": False,
-                "label": {"show": False, "position": "center"},
-                "labelLine": {"show": False},
-                "data": df_os_charge.to_dict('records')
+                "data": df_os_charge['amount_charged'].to_list(),
+                'type': 'bar'
             }
         ],
     }
+    ##End
     st_echarts(
         options=options, height="500px",
     )
-
-
-
-
-
