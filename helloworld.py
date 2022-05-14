@@ -1,5 +1,4 @@
-import folium as folium
-from folium.plugins import FastMarkerCluster
+
 import altair as alt
 import folium as folium
 import geopandas
@@ -121,7 +120,7 @@ with st.echo(code_location='below'):
 
     full_df = get_municipality()
     """Я хочу анализировать только Москву, поэтому удалю заказы не из Москвы"""
-    full_df.dropna(subset='district', inplace=True)
+    full_df.dropna(subset=['district'], inplace=True)
     full_df['day_of_week'].mask(full_df['day_of_week'] == 'Friday', 'Пятница', inplace=True)
     full_df['day_of_week'].mask(full_df['day_of_week'] == 'Monday', 'Понедельник', inplace=True)
     full_df['day_of_week'].mask(full_df['day_of_week'] == 'Tuesday', 'Вторник', inplace=True)
