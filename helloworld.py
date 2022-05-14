@@ -454,6 +454,7 @@ with st.echo(code_location='below'):
 
     """### Теперь давайте посмотрим на зависимость среднего чека и количество заказов от расстояния до центра"""
     df_dist = df_final.query('distance_from_center<100')
+    df_dist['distance_from_center'] = df_dist['distance_from_center'].round(0)
     coll1, coll2 = st.columns(2)
     with coll1:
         """#### По среднему чеку"""
@@ -473,6 +474,7 @@ with st.echo(code_location='below'):
         st.altair_chart(alt.layer(base, *polynomial_fit))
     with coll2:
         """#### Количество заказов"""
+        
         df_dist_2 = df_dist.groupby('distance_from_center', as_index=False).agg({'id': 'count'})
         df_dist_2['distance_from_center'] = np.round(df_dist_2['distance_from_center'], 0)
         base = alt.Chart(df_dist.groupby('distance_from_center', as_index=False).agg({'id': 'count'})).mark_circle(
@@ -527,7 +529,7 @@ with st.echo(code_location='below'):
         options=options, height="500px",
     )
     ## END
-    """### А пользователи каких устройств больше платят?"""
+    """### А пользователи каких устройств больше платят в среднем?"""
     df_os_charge = df_final.groupby('os', as_index=False).agg({'amount_charged': 'mean'})
     ##From (https://echarts.apache.org/examples/en/editor.html?c=bar-simple&lang=js)
     options = {
@@ -550,3 +552,5 @@ with st.echo(code_location='below'):
     st_echarts(
         options=options, height="500px",
     )
+
+    """Теперь пройдемся по района"""
