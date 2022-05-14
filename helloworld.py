@@ -58,7 +58,7 @@ with st.echo(code_location='below'):
     df['Times_of_Day'] = df['Times_of_Day'].astype(str)
 
 
-    @st.cache(persist=True)
+    @st.experimental_singleton()
     def get_distance():
         # Добавляем расстояние до центра Москвы
         distance_from_c = []
