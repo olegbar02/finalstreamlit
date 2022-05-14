@@ -493,6 +493,8 @@ with st.echo(code_location='below'):
     df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('android'), 'Android', inplace=True)
     st.write(df_final['user_agent'].unique())
     df_os = df_final.groupby('os', as_index=False).agg({'id':'count'})
+    df_os.rename(columns={'os':'name', 'id':'value'})
+
     options = {
         "tooltip": {"trigger": "item"},
         "legend": {"top": "5%", "left": "center"},
@@ -512,7 +514,7 @@ with st.echo(code_location='below'):
                     "label": {"show": True, "fontSize": "40", "fontWeight": "bold"}
                 },
                 "labelLine": {"show": False},
-                "data": df_os,
+                "data": df_os.to_dict('records'),
             }
         ],
     }
