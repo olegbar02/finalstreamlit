@@ -36,7 +36,7 @@ with st.echo(code_location='below'):
     @st.experimental_singleton()
     def get_data():
         data_url = 'yangodatanorm 3.csv.zip'
-        return pd.read_csv(data_url).sample(frac=0.05)
+        return pd.read_csv(data_url).sample(frac=0.08)
 
 
     initial_df = get_data()
