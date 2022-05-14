@@ -543,4 +543,3 @@ with st.echo(code_location='below'):
         options=options, height="500px",
     )
 
-    """Теперь пройдемся по районам"""
