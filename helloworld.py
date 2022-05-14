@@ -1,6 +1,7 @@
 from typing import Union, Any
 import fiona
 import folium as folium
+import streamlit_echarts
 from folium.plugins import MarkerCluster, FastMarkerCluster
 import streamlit as st
 import pandas as pd
@@ -17,6 +18,7 @@ from geopy import distance
 from shapely.geometry import Point, MultiPolygon, Polygon
 import pydeck as pdk
 from streamlit_echarts import st_echarts
+
 from plotly.subplots import make_subplots
 from shapely.wkt import dumps, loads
 st.set_page_config(layout="wide")
@@ -33,7 +35,7 @@ with st.echo(code_location='below'):
     @st.experimental_singleton()
     def get_data():
         data_url = 'yangodatanorm 3.csv.zip'
-        return pd.read_csv(data_url).sample(frac=0.1)
+        return pd.read_csv(data_url).sample(frac=0.01)
 
 
     initial_df = get_data()
@@ -58,18 +60,18 @@ with st.echo(code_location='below'):
     df['Times_of_Day'] = df['Times_of_Day'].astype(str)
 
 
-    @st.experimental_singleton()
-    def get_distance():
-        # Добавляем расстояние до центра Москвы
-        distance_from_c = []
-        for lat, lon in zip(df['location_latitude'], df['location_longitude']):
-            distance_from_c.append(distance.distance((lat, lon), (55.753544, 37.621211)).km)
-            # geometry.append(Point(lon, lat))
-        return pd.Series(distance_from_c)
-
-
-    dist = get_distance()
-    df['distance_from_center'] = dist
+    # @st.experimental_singleton()
+    # def get_distance():
+    #     # Добавляем расстояние до центра Москвы
+    #     distance_from_c = []
+    #     for lat, lon in zip(df['location_latitude'], df['location_longitude']):
+    #         distance_from_c.append(distance.distance((lat, lon), (55.753544, 37.621211)).km)
+    #         # geometry.append(Point(lon, lat))
+    #     return pd.Series(distance_from_c)
+    #
+    #
+    # dist = get_distance()
+    # df['distance_from_center'] = dist
 
 
     @st.experimental_singleton()
@@ -111,6 +113,9 @@ with st.echo(code_location='below'):
         new_df = df.copy(deep=True)
         for idx, row in new_df.iterrows():
             coord = row.coords
+            lat = row.location_latitude
+            lon = row.location_longitude
+            new_df.at[idx, 'distance_from_center']=distance.distance((lat, lon), (55.753544, 37.621211)).km
             for distr, okr, geometry in zip(moscow_geometry_df['district'], moscow_geometry_df['okrug'],
                                             moscow_geometry_df['geometry']):
                 if geometry.contains(coord):
@@ -500,7 +505,7 @@ with st.echo(code_location='below'):
         "legend": {"top": "5%", "left": "center"},
         "series": [
             {
-                "name": "Количество заказов по устройствам",
+                "name": "Количество заказов",
                 "type": "pie",
                 "radius": ["40%", "70%"],
                 "avoidLabelOverlap": False,
