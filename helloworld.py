@@ -1,26 +1,18 @@
-from typing import Union, Any
-import fiona
 import folium as folium
-import streamlit_echarts
-from folium.plugins import MarkerCluster, FastMarkerCluster
-import streamlit as st
-import pandas as pd
-from streamlit_folium import st_folium, folium_static
-from folium.features import GeoJsonTooltip
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
+from folium.plugins import FastMarkerCluster
 import altair as alt
-import plotly.graph_objects as go
-import plotly.express as px
+import folium as folium
 import geopandas
-from geopy import distance
-from shapely.geometry import Point, MultiPolygon, Polygon
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
 import pydeck as pdk
+import streamlit as st
+from folium.plugins import FastMarkerCluster
+from geopy import distance
+from shapely.geometry import Point
 from streamlit_echarts import st_echarts
-
-from plotly.subplots import make_subplots
-from shapely.wkt import dumps, loads
+from streamlit_folium import folium_static
 
 st.set_page_config(layout="wide")
 with st.echo(code_location='below'):
