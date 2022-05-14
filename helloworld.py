@@ -496,10 +496,9 @@ with st.echo(code_location='below'):
     df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('macintosh'), 'Mac OS X', inplace=True)
     df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('windows'), 'Windows', inplace=True)
     df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('android'), 'Android', inplace=True)
-    st.write(df_final['user_agent'].unique())
     df_os = df_final.groupby('os', as_index=False).agg({'id':'count'})
     df_os.rename(columns={'os':'name', 'id':'value'}, inplace=True)
-
+    ## From (https://share.streamlit.io/andfanilo/streamlit-echarts-demo/master/app.py)
     options = {
         "tooltip": {"trigger": "item"},
         "legend": {"top": "5%", "left": "center"},
@@ -526,8 +525,35 @@ with st.echo(code_location='below'):
     st_echarts(
         options=options, height="500px",
     )
-
-
+    ## END
+    """### А пользователи каких устройств больше платят?"""
+    df_os_charge = df_final.groupby('os', as_index=False).agg({'amount_charged': 'mean'})
+    options = {
+        "tooltip": {"trigger": "item"},
+        "legend": {"top": "5%", "left": "center"},
+        "series": [
+            {
+                "name": "Количество заказов",
+                "type": "bar",
+                "radius": ["40%", "70%"],
+                "avoidLabelOverlap": False,
+                "itemStyle": {
+                    "borderRadius": 10,
+                    "borderColor": "#fff",
+                    "borderWidth": 2,
+                },
+                "label": {"show": False, "position": "center"},
+                "emphasis": {
+                    "label": {"show": True, "fontSize": "40", "fontWeight": "bold"}
+                },
+                "labelLine": {"show": False},
+                "data": df_os_charge.to_dict('records'),
+            }
+        ],
+    }
+    st_echarts(
+        options=options, height="500px",
+    )
 
 
 
