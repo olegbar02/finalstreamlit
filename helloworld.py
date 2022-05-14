@@ -263,7 +263,7 @@ with st.echo(code_location='below'):
         # )
         ##END
 
-    map = folium.Map(location=[55.753544, 37.621211], zoom_start=10, width=1500)
+    map = folium.Map(location=[55.753544, 37.621211], zoom_start=10, width=1200)
 
     cho = folium.Choropleth(geo_data=geojson, data=df_municipalities, columns=merge_col
                             , key_on=keys
