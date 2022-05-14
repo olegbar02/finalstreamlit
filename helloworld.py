@@ -443,8 +443,8 @@ with st.echo(code_location='below'):
         get_map(df_night)
 
     """### Теперь давайте посмотрим на зависимость среднего чека и количество заказов от расстояния до центра"""
-    df_dist = df_final.query('distance_from_center<100')
-    df_dist['distance_from_center'] = df_dist['distance_from_center'].round(0)
+    df_dist = df_final.query('distance_from_center<30')
+    df_dist['distance_from_center'] = df_dist['distance_from_center'].round(1)
     coll1, coll2 = st.columns(2)
     with coll1:
         """#### По среднему чеку"""
