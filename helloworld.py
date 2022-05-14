@@ -16,7 +16,7 @@ import geopandas
 from geopy import distance
 from shapely.geometry import Point, MultiPolygon, Polygon
 import pydeck as pdk
-
+from streamlit_echarts import st_echarts
 from plotly.subplots import make_subplots
 from shapely.wkt import dumps, loads
 st.set_page_config(layout="wide")
@@ -433,17 +433,17 @@ with st.echo(code_location='below'):
     morning, day = st.columns(2)
     with morning:
         """#### Утро"""
-        df_morn = df_final.query(query1).dropna()
+        df_morn = df_final.query(query1).dropna(subset=["location_longitude", "location_latitude"])
         get_map(df_morn)
         """#### Вечер"""
-        df_day = df_final.query(query3).dropna()
+        df_day = df_final.query(query3).dropna(subset=["location_longitude", "location_latitude"])
         get_map(df_day)
     with day:
         """#### День"""
-        df_eve = df_final.query(query2).dropna()
+        df_eve = df_final.query(query2).dropna(subset=["location_longitude", "location_latitude"])
         get_map(df_eve)
         """#### Ночь"""
-        df_night = df_final.query(query4).dropna()
+        df_night = df_final.query(query4).dropna(subset=["location_longitude", "location_latitude"])
         get_map(df_night)
 
 
@@ -486,11 +486,39 @@ with st.echo(code_location='below'):
 
     """### Посмотрим пользователи каких устройств больше пользуются Яндекс Едой"""
     df_final['os']='Other'
-    df_final['os'].mask(df_final['user_agent'].str.contains('ios'), 'IOS', inplace=True)
-    df_final['os'].mask(df_final['user_agent'].str.contains('android'), 'Android', inplace=True)
-
+    df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('ios'), 'IOS', inplace=True)
+    df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('iphone'), 'IOS', inplace=True)
+    df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('macintosh'), 'Mac OS X', inplace=True)
+    df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('windows'), 'Windows', inplace=True)
+    df_final['os'].mask(df_final['user_agent'].str.lower().str.contains('android'), 'Android', inplace=True)
+    st.write(df_final['user_agent'].unique())
     df_os = df_final.groupby('os', as_index=False).agg({'id':'count'})
-    st.plotly_chart(px.pie(df_os, names='os', values='id'))
+    options = {
+        "tooltip": {"trigger": "item"},
+        "legend": {"top": "5%", "left": "center"},
+        "series": [
+            {
+                "name": "Количество заказов по устройствам",
+                "type": "pie",
+                "radius": ["40%", "70%"],
+                "avoidLabelOverlap": False,
+                "itemStyle": {
+                    "borderRadius": 10,
+                    "borderColor": "#fff",
+                    "borderWidth": 2,
+                },
+                "label": {"show": False, "position": "center"},
+                "emphasis": {
+                    "label": {"show": True, "fontSize": "40", "fontWeight": "bold"}
+                },
+                "labelLine": {"show": False},
+                "data": df_os,
+            }
+        ],
+    }
+    st_echarts(
+        options=options, height="500px",
+    )
 
 
 
